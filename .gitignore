@@ -1,0 +1,23 @@
+# entorno y cachés de Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# secretos: la clave de OpenAI va en OPENAI_API_KEY, nunca en el repo
+.env
+.env.*
+!.env.example
+
+# salidas y estado de las ejecuciones locales: Kontaktu evalúa desde cero, sin estado previo
+salida/
+out/
+*.sqlite
+*.sqlite3
+*.db
+
+# sistema
+.DS_Store
+Thumbs.db
