@@ -28,7 +28,5 @@ result = subprocess.run(
 # 5 = pytest no encontró tests: no es un fallo.
 if result.returncode not in (0, 5):
     tail = (result.stdout + result.stderr).strip().splitlines()[-40:]
-    sys.stderr.write(
-        "Hay tests en rojo; arréglalos antes de terminar:\n" + "\n".join(tail) + "\n"
-    )
+    sys.stderr.write("Hay tests en rojo; arréglalos antes de terminar:\n" + "\n".join(tail) + "\n")
     sys.exit(2)

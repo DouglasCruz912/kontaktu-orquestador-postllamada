@@ -21,9 +21,7 @@ project = Path(os.environ.get("CLAUDE_PROJECT_DIR", "."))
 if not file_path.endswith(".py") or not (project / "pyproject.toml").exists():
     sys.exit(0)
 
-subprocess.run(
-    ["uv", "run", "ruff", "format", file_path], cwd=project, capture_output=True
-)
+subprocess.run(["uv", "run", "ruff", "format", file_path], cwd=project, capture_output=True)
 check = subprocess.run(
     ["uv", "run", "ruff", "check", "--fix", "--output-format", "concise", file_path],
     cwd=project,
@@ -32,7 +30,5 @@ check = subprocess.run(
 )
 if check.returncode != 0:
     lines = (check.stdout + check.stderr).strip().splitlines()
-    sys.stderr.write(
-        f"ruff encontró errores en {file_path}:\n" + "\n".join(lines[:30]) + "\n"
-    )
+    sys.stderr.write(f"ruff encontró errores en {file_path}:\n" + "\n".join(lines[:30]) + "\n")
     sys.exit(2)
