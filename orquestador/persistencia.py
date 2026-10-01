@@ -62,10 +62,11 @@ class Repositorio:
         self.conn.execute("BEGIN IMMEDIATE")
         try:
             yield self.conn
+            self.conn.execute("COMMIT")
         except BaseException:
-            self.conn.execute("ROLLBACK")
+            if self.conn.in_transaction:  # SQLite puede haber deshecho ya por su cuenta
+                self.conn.execute("ROLLBACK")
             raise
-        self.conn.execute("COMMIT")
 
     # --- lecturas ------------------------------------------------------------------------------------------------
 

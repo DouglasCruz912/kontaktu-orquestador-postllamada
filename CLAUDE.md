@@ -21,7 +21,7 @@ Sistema en Python + LangGraph que recibe de uno en uno los eventos de fin de lla
 - `add_node(..., retry_policy=RetryPolicy(max_attempts=3), error_handler=..., timeout=...)`. `timeout` solo funciona en nodos **async**.
 - `invoke` devuelve un **dict**, no el modelo Pydantic: la salida final se valida explícitamente.
 - Los modelos falsos de LangChain **no** soportan `with_structured_output` (lanzan `NotImplementedError`). Por eso el clasificador LLM entra por `context` detrás de una interfaz, y los tests usan un doble propio.
-- OpenAI con salida estructurada `method="json_schema", strict=True`: todos los campos obligatorios, sin valores por defecto ni restricciones de `Field`; lo opcional es `X | None`. Con `include_raw=True`, un fallo de parseo da `parsed=None` en vez de lanzar.
+- OpenAI con salida estructurada `method="json_schema", strict=True`: todos los campos obligatorios, sin valores por defecto ni restricciones de `Field`; lo opcional es `X | None`. Con `include_raw=True`, un *refusal* da `parsed=None`; pero por Chat Completions el SDK usa `parse()` y un `ValidationError` o un corte por longitud o por filtro **se lanzan** (corregido tras la revisión contra el código fuente).
 - Documentación oficial actualizada: MCP `docs-langchain` (en `.mcp.json`) o https://docs.langchain.com/llms.txt.
 
 ## Principios de diseño

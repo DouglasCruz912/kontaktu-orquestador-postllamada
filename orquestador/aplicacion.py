@@ -44,20 +44,21 @@ def procesar(ruta_evento: Path, dir_salida: Path | None = None, clasificador: Cl
     if faltan:
         return _fallo(dir_salida, evento, f"evento no procesable, faltan campos: {faltan}")
 
-    if clasificador is None:
-        from orquestador.clasificador_openai import ClasificadorOpenAI
-
-        clasificador = ClasificadorOpenAI.desde_entorno()
-
-    repo = Repositorio(dir_salida / "estado.sqlite")
+    repo = None
     try:
+        if clasificador is None:
+            from orquestador.clasificador_openai import ClasificadorOpenAI
+
+            clasificador = ClasificadorOpenAI.desde_entorno()
+        repo = Repositorio(dir_salida / "estado.sqlite")
         contexto = Contexto(config=cargar_config(), repo=repo, clasificador=clasificador, dir_salida=dir_salida)
         resultado = construir_grafo().invoke({"evento": evento, "avisos": []}, context=contexto)
     except Exception as e:  # R8: este evento falla, pero deja rastro y no bloquea los siguientes
         traceback.print_exc(file=sys.stderr)
         return _fallo(dir_salida, evento, f"error interno: {type(e).__name__}: {e}")
     finally:
-        repo.cerrar()
+        if repo is not None:
+            repo.cerrar()
 
     for aviso in resultado.get("avisos", []):
         print(f"[aviso] {evento['event_id']}: {aviso}", file=sys.stderr)

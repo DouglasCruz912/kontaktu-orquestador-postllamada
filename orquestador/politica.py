@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from orquestador.calendario import TZ
+from orquestador.calendario import a_madrid
 from orquestador.clasificador import ClasificacionLLM
 from orquestador.config import Config
 from orquestador.dominio import (
@@ -44,7 +44,7 @@ class _Borrador:
 
 
 def instante(texto: str) -> datetime:
-    return datetime.fromisoformat(texto).astimezone(TZ)
+    return a_madrid(texto)
 
 
 def planificar_llamada(
@@ -304,10 +304,9 @@ def _parsear_hora_local(texto: str | None) -> datetime | None:
     if not texto:
         return None
     try:
-        valor = datetime.fromisoformat(texto)
+        return a_madrid(texto)
     except ValueError:
         return None
-    return valor.replace(tzinfo=TZ) if valor.tzinfo is None else valor.astimezone(TZ)
 
 
 def _nota_contexto(evento: dict, llm: ClasificacionLLM | None) -> str:

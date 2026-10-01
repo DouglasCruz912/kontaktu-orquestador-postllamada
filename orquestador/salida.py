@@ -7,11 +7,12 @@ operación del OpenAPI. OpenAPI 3.1 usa JSON Schema 2020-12, así que se valida 
 import json
 import os
 from dataclasses import dataclass
+from datetime import datetime
 from functools import cache
 from pathlib import Path
 
 import yaml
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator, FormatChecker
 
 from orquestador.config import RAIZ
 from orquestador.dominio import Clasificacion, Orden, Recordatorio
@@ -19,6 +20,15 @@ from orquestador.persistencia import Repositorio
 from orquestador.politica import reminder_id_de
 
 ESQUEMAS = RAIZ / "esquemas"
+
+# jsonschema no valida `format` por defecto, y su checker de date-time necesita un paquete extra. Este es propio y
+# más estricto: el OpenAPI pide «offset explícito» en no_antes_de, así que un instante sin zona no es válido.
+FECHAS = FormatChecker(formats=())
+
+
+@FECHAS.checks("date-time", raises=ValueError)
+def _fecha_con_offset(valor: object) -> bool:
+    return not isinstance(valor, str) or datetime.fromisoformat(valor).tzinfo is not None
 
 
 @cache
@@ -33,7 +43,7 @@ def _validadores_ordenes() -> dict[str, Draft202012Validator]:
     for metodos in openapi["paths"].values():
         for operacion in metodos.values():
             esquema = operacion["requestBody"]["content"]["application/json"]["schema"]
-            validadores[operacion["operationId"]] = Draft202012Validator(esquema)
+            validadores[operacion["operationId"]] = Draft202012Validator(esquema, format_checker=FECHAS)
     return validadores
 
 
@@ -69,49 +79,58 @@ def emitir(
     """
     avisos: list[str] = []
     lineas_ordenes: list[dict] = []
-    with repo.transaccion():
-        for orden in ordenes:
-            if repo.orden_emitida(orden.idempotency_key):  # R5: el mismo hecho no duplica órdenes
-                avisos.append(f"orden ya emitida, se omite: {orden.idempotency_key}")
-                continue
-            errores = errores_orden(orden)
-            if errores:  # nunca se escribe algo que el CRM rechazaría; queda constancia
-                avisos.append(f"orden {orden.operacion} no válida, se omite: {errores}")
-                continue
-            repo.registrar_orden(
-                orden.orden_id, evento["event_id"], orden.operacion, orden.idempotency_key, orden.cuerpo
-            )
-            _efectos_en_estado(repo, evento, orden)
-            lineas_ordenes.append(
-                {
-                    "orden_id": orden.orden_id,
-                    "event_id": evento["event_id"],
-                    "operacion": orden.operacion,
-                    "idempotency_key": orden.idempotency_key,
-                    "cuerpo": orden.cuerpo,
-                }
-            )
+    ficheros = [dir_salida / "ordenes.jsonl", dir_salida / "decisiones.jsonl"]
+    tamanos: dict[Path, int] | None = None
+    try:
+        with repo.transaccion():
+            for orden in ordenes:
+                if repo.orden_emitida(orden.idempotency_key):  # R5: el mismo hecho no duplica órdenes
+                    avisos.append(f"orden ya emitida, se omite: {orden.idempotency_key}")
+                    continue
+                errores = errores_orden(orden)
+                if errores:  # nunca se escribe algo que el CRM rechazaría; queda constancia
+                    avisos.append(f"orden {orden.operacion} no válida, se omite: {errores}")
+                    continue
+                repo.registrar_orden(
+                    orden.orden_id, evento["event_id"], orden.operacion, orden.idempotency_key, orden.cuerpo
+                )
+                _efectos_en_estado(repo, evento, orden)
+                lineas_ordenes.append(
+                    {
+                        "orden_id": orden.orden_id,
+                        "event_id": evento["event_id"],
+                        "operacion": orden.operacion,
+                        "idempotency_key": orden.idempotency_key,
+                        "cuerpo": orden.cuerpo,
+                    }
+                )
 
-        if registrar_evento:
-            repo.registrar_evento(evento, clasif)
-        if cambios_lead and cambios_lead.rechaza_whatsapp is not None:
-            repo.marcar_lead(evento["lead"]["contact_id"], rechaza_whatsapp=cambios_lead.rechaza_whatsapp)
+            if registrar_evento:
+                repo.registrar_evento(evento, clasif)
+            if cambios_lead and cambios_lead.rechaza_whatsapp is not None:
+                repo.marcar_lead(evento["lead"]["contact_id"], rechaza_whatsapp=cambios_lead.rechaza_whatsapp)
 
-        decision = {
-            "event_id": evento["event_id"],
-            "call_id": (evento.get("telephony") or {}).get("call_id"),
-            "etiqueta": clasif.etiqueta,
-            "motivo": clasif.motivo,
-            "confianza": clasif.confianza,
-            "ordenes": [linea["orden_id"] for linea in lineas_ordenes],
-        }
-        errores = errores_decision(decision)
-        if errores:
-            raise ValueError(f"la decisión no cumple decision.schema.json: {errores}")
+            decision = {
+                "event_id": evento["event_id"],
+                "call_id": (evento.get("telephony") or {}).get("call_id"),
+                "etiqueta": clasif.etiqueta,
+                "motivo": clasif.motivo,
+                "confianza": clasif.confianza,
+                "ordenes": [linea["orden_id"] for linea in lineas_ordenes],
+            }
+            errores = errores_decision(decision)
+            if errores:
+                raise ValueError(f"la decisión no cumple decision.schema.json: {errores}")
 
-        # Dentro de la transacción: si la escritura falla, ROLLBACK y no queda nada a medias en el estado.
-        _anadir_lineas(dir_salida / "ordenes.jsonl", lineas_ordenes)
-        _anadir_lineas(dir_salida / "decisiones.jsonl", [decision])
+            # Dentro de la transacción: si la escritura o el COMMIT fallan, ROLLBACK del estado y se truncan
+            # los JSONL a su tamaño anterior. Así no quedan órdenes escritas que un reproceso duplicaría (R5).
+            tamanos = {f: (f.stat().st_size if f.exists() else 0) for f in ficheros}
+            _anadir_lineas(ficheros[0], lineas_ordenes)
+            _anadir_lineas(ficheros[1], [decision])
+    except BaseException:
+        if tamanos is not None:
+            _restaurar(tamanos)
+        raise
     return decision, avisos
 
 
@@ -127,6 +146,13 @@ def _efectos_en_estado(repo: Repositorio, evento: dict, orden: Orden) -> None:
         repo.cancelar_recordatorio(orden.cuerpo["reminder_id"])
     elif orden.operacion == "marcar_no_contactar":
         repo.marcar_lead(contact_id, baja=True)
+
+
+def _restaurar(tamanos: dict[Path, int]) -> None:
+    for ruta, tamano in tamanos.items():
+        if ruta.exists() and ruta.stat().st_size > tamano:
+            with ruta.open("r+b") as f:
+                f.truncate(tamano)
 
 
 def _anadir_lineas(ruta: Path, lineas: list[dict]) -> None:

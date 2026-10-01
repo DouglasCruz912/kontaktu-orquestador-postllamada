@@ -35,7 +35,7 @@ from orquestador.reglas import aplicar_reglas
 from orquestador.salida import CambiosLead, emitir
 from orquestador.senalizacion import clasificar_por_senalizacion
 
-Ruta = Literal["otra_org", "reentrega", "mensaje", "llamada"]
+Ruta = Literal["otra_org", "desconocido", "reentrega", "mensaje", "llamada"]
 
 
 class Estado(TypedDict, total=False):
@@ -73,13 +73,19 @@ def cargar_contexto(state: Estado, runtime: Runtime[Contexto]) -> dict:
     previa = ctx.repo.evento_previo(evento["idempotency_key"])
     if previa is not None:
         return {"ruta": "reentrega", "clasificacion": previa}
+    if evento["type"] not in ("call.ended", "message.received"):
+        return {"ruta": "desconocido"}  # nunca cerrar_llamada para algo que no es una llamada
     ruta: Ruta = "mensaje" if evento["type"] == "message.received" else "llamada"
     return {"ruta": ruta, "lead": ctx.repo.contexto_lead(evento["lead"]["contact_id"])}
 
 
 def no_aplica(state: Estado) -> dict:
-    org = state["evento"]["organization_id"]
-    clasif = Clasificacion("no_aplica", f"evento de otra organización ({org}): no se procesa", 1.0, "no_aplica")
+    evento = state["evento"]
+    if state["ruta"] == "otra_org":
+        motivo = f"evento de otra organización ({evento['organization_id']}): no se procesa"
+    else:
+        motivo = f"tipo de evento no contemplado ({evento['type']}): no se procesa"
+    clasif = Clasificacion("no_aplica", motivo, 1.0, "no_aplica")
     return {"clasificacion": clasif, "ordenes": [], "registrar_evento": False}
 
 
@@ -107,10 +113,11 @@ def clasificar_llm(state: Estado, runtime: Runtime[Contexto]) -> dict:
     return {"llm": runtime.context.clasificador.clasificar(state["evento"]), "error_llm": None}
 
 
-def respaldo_llm(state: Estado, error: NodeError) -> Command:
+def respaldo_llm(state: Estado, error: NodeError) -> Command[Literal["reglas_duras"]]:
     """error_handler de clasificar_llm: agotados los reintentos, se sigue sin LLM (acabará en `otro`).
 
-    Hay que devolver Command(goto=...): sin goto, el grafo termina en el manejador.
+    Hay que devolver Command(goto=...): sin goto, el grafo termina en el manejador. (draw_mermaid no dibuja esta
+    arista en LangGraph 1.2.12: el manejador se registra sin destinos.)
     """
     detalle = f"{type(error.error).__name__}: {error.error}"
     return Command(
@@ -185,6 +192,7 @@ def construir_grafo():
         por_ruta,
         {
             "otra_org": "no_aplica",
+            "desconocido": "no_aplica",
             "reentrega": "repetir_decision",
             "mensaje": "cancelar_recordatorios",
             "llamada": "clasificar_senalizacion",

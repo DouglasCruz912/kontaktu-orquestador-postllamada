@@ -30,6 +30,12 @@ Herramienta: **Claude Code** (Opus 5.5), en Windows 11.
 | 11 | Cuatro preguntas de diseño (intentos, baja, callback, email) | Recomendó una opción en cada una | N3 solo para los casos sin contacto; baja con LLM y regex; manda la hora del lead. **No escribir a Kontaktu**: «no estamos en horario; dímelas a mí y decidimos juntos» |
 | 12 | Elegir arquitectura | Propuso A (grafo explícito, lo determinista primero), B (agente ReAct) y C (A con checkpointer), y recomendó A | A |
 | 13 | Tres dudas de la especificación | Me trajo el desacuerdo del revisor sobre N3 en vez de ocultarlo | Mantener N3 solo sin contacto; tarea `llamar_a_mano` si el lead rechazó WhatsApp; cancelar recordatorios al dar de baja |
+| 14 | Aprobar el plan | Implementó con TDD por hitos: calendario → señalización → política → persistencia → grafo → tabla dorada con un doble (60 tests) → clasificador OpenAI | — |
+| 15 | — | Antes de escribir el grafo **comprobó con un experimento** cómo funciona `error_handler` en LangGraph 1.2: recibe `(state, error: NodeError)` y, si no devuelve `Command(goto=...)`, el grafo termina en el manejador. La documentación no lo dejaba claro | — |
+| 16 | — | Listó los modelos de mi cuenta y probó `gpt-6-luna` con una llamada real, con y sin `reasoning_effort` (misma respuesta; 2,6 s frente a 4,5 s). Usó mi clave de las variables de usuario sin mostrarla | `gpt-6-luna` con `reasoning_effort=none` |
+| 17 | «Recuerda verificar el código con las buenas prácticas de las tecnologías; quizá context7» | Lanzó en segundo plano un **agente revisor de solo lectura** que contrastó el código con la documentación oficial (MCP `docs-langchain`; context7 no estaba disponible) y con el código fuente instalado. Propuso además una revisión final de bugs con agentes nuevos | — |
+| 18 | — | El revisor confirmó el núcleo (`context_schema`, `error_handler` + `Command`, aristas condicionales, `max_retries=0`, esquema strict) y encontró 6 riesgos y 3 detalles de estilo. La IA los aplicó todos, con un test para cada riesgo | — |
+| 19 | «Continúa, se fue la luz otra vez» | Comprobó que el repo quedó entero (`git fsck`, lint, 90 tests), avisó de que el tope de 4 h ya había pasado en tiempo de reloj, y repitió los dos lotes con el LLM real para descartar regresiones | Seguir |
 
 ## 2. Skills, plugins y herramientas: cuáles y por qué
 
@@ -48,6 +54,18 @@ Herramienta: **Claude Code** (Opus 5.5), en Windows 11.
 2. **Acentos rotos en los mensajes de los hooks** («encontr�»). En Windows, Python escribe stderr en cp1252. **Detectado** al probar los hooks en un proyecto desechable. Arreglo: `sys.stderr.reconfigure(encoding="utf-8")`.
 3. **Código metido entre dos imports.** Al añadir esa línea con `sed`, quedó entre dos imports. **Detectado** al pasarle ruff al propio harness.
 4. **Falso positivo de CRLF al verificar el primer commit.** Un `git grep` que buscaba retornos de carro dio «29 ficheros con CRLF». **Detectado** por la propia IA, porque contradecía la salida de `file` (solo LF). Repitió la comprobación contando bytes y salieron 0. El error era del comando, no del repo.
+5. **Regex de baja con falso positivo.** «No quiero que me llaméis ahora» se detectaba como baja: `\w*` retrocedía para esquivar la condición. **Detectado** por la propia IA al probar la regex con frases trampa antes de escribir los tests. Se corrigió con un cuantificador posesivo (`\w*+`) y exigiendo fin de frase.
+6. **Teléfono mal escrito en un test** (un 0 de más). **Detectado** porque falló el test; el código estaba bien.
+7. **Afirmación inexacta en `CLAUDE.md` sobre `include_raw`.** Venía de la investigación previa: «un fallo de parseo da `parsed=None`». **Detectado por el agente revisor**, que leyó el código fuente de langchain-openai: por Chat Completions, los errores de validación se lanzan como excepción. El comportamiento era correcto por casualidad (el `error_handler` los recoge), pero la explicación no lo era. Corregido en el código y en `CLAUDE.md`.
+8. **Seis riesgos de robustez que la IA no vio al programar:**
+   - **A:** órdenes huérfanas si fallaba la escritura.
+   - **B:** un ROLLBACK que podía tapar el error original.
+   - **C:** fechas sin offset que se daban por válidas.
+   - **D:** `occurred_at` sin zona interpretado en la zona del sistema.
+   - **E:** un tipo de evento desconocido que acababa en `cerrar_llamada`.
+   - **F:** fallos al abrir SQLite sin línea de respaldo.
+
+   **Detectados por el agente revisor.** Todos tienen ahora su test.
 
 ### Afirmaciones de la investigación comprobadas contra la librería instalada (4 de 4 correctas)
 
@@ -59,6 +77,7 @@ Herramienta: **Claude Code** (Opus 5.5), en Windows 11.
 ## 4. Decisiones (desviaciones y criterio)
 
 - **Desviación del proceso:** la spec aprobada (`docs/superpowers/specs/2026-09-30-orquestador-design.md`) hace también de plan de implementación, en lugar de escribir un segundo documento con writing-plans. **Por qué:** el tope de 4 h. **Coste:** las tareas son menos granulares; se compensa con TDD y verificación por hitos.
+- **Revisión de buenas prácticas en paralelo** (a petición mía): un agente de solo lectura contrastó el código con la documentación oficial mientras la IA seguía con el lote real. **Por qué:** no frenar la implementación y tener ojos que no escribieron el código.
 - **Comprobación cruzada:** la tabla de 16 decisiones y 29 órdenes esperadas la calcularon por separado la IA principal y un agente revisor, y coincidieron. El agente encontró que `orden_id = "ord_" + sha1(clave)[:8]` reproduce exactamente el ejemplo resuelto.
 
 - **Decisión:** `uv` con Python 3.12 de la Store. **Por qué:** `uv.lock` da a Kontaktu exactamente las mismas versiones. **Coste si es un error:** se añade un `requirements.txt` exportado para quien no use uv.
@@ -73,3 +92,8 @@ Herramienta: **Claude Code** (Opus 5.5), en Windows 11.
 - 2026-09-30, 19:33: **zip abierto y descomprimido. Empieza el reloj (tope: 4 h).**
 - 2026-09-30, ~19:50: lectura del enunciado y resumen terminados. Primer commit (el zip intacto) y segundo (el harness).
 - 2026-09-30, 20:29: brainstorming terminado y spec aprobada. Empieza la implementación.
+- 2026-09-30, 20:37: grafo determinista y tabla dorada en verde (60 tests).
+- 2026-09-30, 20:42: clasificador OpenAI. Lote real: 16/16.
+- 2026-09-30, 20:45: 21 eventos extra. Lote real: 21/21.
+- 2026-09-30, ~20:58: correcciones de la revisión aplicadas (90 tests). **Corte de luz**: la sesión se interrumpe sin el commit de esas correcciones.
+- 2026-10-01, 07:02: se retoma. El repo estaba intacto. **Tiempo efectivo hasta el corte: ~1 h 25 min** (19:33 a ~20:58). El tope de 4 h ya había pasado en tiempo de reloj.

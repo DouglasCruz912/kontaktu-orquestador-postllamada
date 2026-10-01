@@ -2,19 +2,20 @@
 
 - Los prompts viven en prompts/ (versionados), nunca incrustados aquí.
 - `json_schema` strict: el modelo solo puede devolver el esquema de ClasificacionLLM (etiquetas del enum cerrado).
-- `include_raw=True`: un fallo de parseo llega como `parsed=None` en vez de excepción; aquí se convierte en
-  ClasificacionInvalida, que el grafo envía al error_handler del nodo (→ etiqueta `otro`).
+- `include_raw=True`: un rechazo (refusal) llega como `parsed=None` y aquí se convierte en ClasificacionInvalida.
+  Ojo: por Chat Completions el SDK usa `parse()`, y un ValidationError o un corte por longitud o por filtro de
+  contenido se LANZAN como excepción, no llegan como `parsed=None`. En los dos casos el error_handler del nodo
+  lo recoge (no están en retry_on) y la etiqueta acaba siendo `otro`.
 - `max_retries=0` en el cliente: los reintentos los gestiona la RetryPolicy del nodo de LangGraph, en un solo sitio.
 """
 
 import json
 import os
-from datetime import datetime
 from string import Template
 
 from langchain_openai import ChatOpenAI
 
-from orquestador.calendario import DIAS_SEMANA, TZ
+from orquestador.calendario import DIAS_SEMANA, a_madrid
 from orquestador.clasificador import ClasificacionLLM
 from orquestador.config import RAIZ
 
@@ -67,7 +68,7 @@ def datos_usuario(evento: dict) -> dict[str, str]:
     amd = tel.get("amd") or {}
     lead = evento.get("lead") or {}
     salida = evento.get("agent_outcome") or {}
-    ref = datetime.fromisoformat(evento["occurred_at"]).astimezone(TZ)
+    ref = a_madrid(evento["occurred_at"])
     turnos = evento.get("transcript") or []
     transcripcion = "\n".join(
         f"[{t.get('time_in_call_secs', '?')}s] {_quien(t)}: {t.get('message', '')}" for t in turnos

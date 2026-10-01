@@ -23,9 +23,10 @@ EtiquetaConversacion = Literal[
 ]
 
 
+# Salida estructurada. Con json_schema strict todo campo es obligatorio; lo opcional es `X | None`.
+# Sin docstring a propósito: pydantic lo enviaría a OpenAI como `description` del esquema (sería parte del prompt,
+# y los prompts viven en prompts/).
 class ClasificacionLLM(BaseModel):
-    """Salida estructurada. Con json_schema strict todo campo es obligatorio; lo opcional es `X | None`."""
-
     etiqueta: EtiquetaConversacion
     motivo: str
     confianza: float

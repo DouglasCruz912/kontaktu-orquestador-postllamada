@@ -93,6 +93,13 @@ class Calendario:
         return datetime.combine(dia, local.time(), tzinfo=self.tz)
 
 
+def a_madrid(texto: str) -> datetime:
+    """ISO 8601 → instante en Europe/Madrid. Sin offset se interpreta como hora de Madrid, nunca la del sistema
+    (astimezone() sobre un datetime naive usaría la zona de la máquina que ejecute el reto)."""
+    valor = datetime.fromisoformat(texto)
+    return valor.replace(tzinfo=TZ) if valor.tzinfo is None else valor.astimezone(TZ)
+
+
 def calendario_desde_config(ventana: dict[str, list[str]], dias_habiles: list[str]) -> Calendario:
     franjas: dict[int, tuple[time, time] | None] = {}
     for indice, nombre in enumerate(DIAS_SEMANA):
