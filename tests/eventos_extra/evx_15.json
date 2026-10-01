@@ -1,0 +1,75 @@
+{
+  "event_id": "evx_15",
+  "type": "call.ended",
+  "occurred_at": "2026-09-15T10:00:00+02:00",
+  "organization_id": "org_demo_a",
+  "idempotency_key": "x-15",
+  "delivery_attempt": 1,
+  "campaign": {
+    "system_key": "first_touch_voice",
+    "entry_id": "ce_x412"
+  },
+  "lead": {
+    "contact_id": "c_x412",
+    "phone": "+34600000412",
+    "full_name": "Lead 412",
+    "lead_source": "idealista",
+    "property_ref": "RIB-1904",
+    "property_address": "avenida de Europa 44, Pozuelo de Alarcón",
+    "language": "es"
+  },
+  "telephony": {
+    "provider": "livekit_sip",
+    "call_id": "x-15",
+    "provider_call_id": "0307-telnyx",
+    "dialed_at": "2026-09-15T11:03:35+02:00",
+    "ringing_at": "2026-09-15T11:03:37+02:00",
+    "answered_at": "2026-09-15T10:00:00+02:00",
+    "ended_at": "2026-09-15T10:00:00+02:00",
+    "sip_status_code": 200,
+    "sip_status": "OK",
+    "disconnect_reason": "CLIENT_INITIATED",
+    "hung_up_by": "callee",
+    "duration_seconds": 40,
+    "amd": {
+      "result": "human",
+      "greeting_transcript": "¿Sí?",
+      "detected_at_secs": 1.5,
+      "source": "livekit_amd"
+    }
+  },
+  "transcript": [
+    {
+      "role": "agent",
+      "message": "Hola, muy buenas. Soy Marta, la asistente virtual de Ribera Inmobiliaria. Te llamo por tu consulta.",
+      "time_in_call_secs": 3
+    },
+    {
+      "role": "user",
+      "message": "Quiero la nota simple.",
+      "time_in_call_secs": 9
+    },
+    {
+      "role": "agent",
+      "message": "Te la mando por WhatsApp.",
+      "time_in_call_secs": 15
+    },
+    {
+      "role": "user",
+      "message": "No, por WhatsApp no, al correo: a@b.es",
+      "time_in_call_secs": 21
+    }
+  ],
+  "agent_outcome": {
+    "appointment": null,
+    "slots_snapshot": {}
+  },
+  "recording": {
+    "gcs_path": "gs://kontaktu-demo/org_demo_a/2026-09/lk-out-0307.ogg",
+    "duration_seconds": 19
+  },
+  "metrics": {
+    "turns": 5,
+    "ttft_ms_p50": 991
+  }
+}

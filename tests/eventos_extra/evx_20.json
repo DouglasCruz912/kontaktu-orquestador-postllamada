@@ -1,0 +1,25 @@
+{
+  "event_id": "evx_20",
+  "type": "message.received",
+  "occurred_at": "2026-09-16T12:00:00+02:00",
+  "organization_id": "org_demo_a",
+  "idempotency_key": "x-20",
+  "delivery_attempt": 1,
+  "campaign": {
+    "system_key": "first_touch_voice",
+    "entry_id": "ce_x414"
+  },
+  "lead": {
+    "contact_id": "c_x414",
+    "phone": "+34600000414",
+    "full_name": "Lead 414",
+    "lead_source": "fotocasa",
+    "property_ref": "RIB-1904",
+    "property_address": "avenida de Europa 44, Pozuelo de Alarcón",
+    "language": "es"
+  },
+  "message": {
+    "channel": "whatsapp",
+    "text": "Hola"
+  }
+}

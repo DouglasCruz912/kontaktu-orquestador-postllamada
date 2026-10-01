@@ -1,0 +1,332 @@
+{
+  "evx_01": {
+    "etiqueta": "rechazada",
+    "operaciones": [
+      "cerrar_llamada",
+      "enviar_plantilla_whatsapp"
+    ],
+    "llm": null,
+    "campos": {}
+  },
+  "evx_02": {
+    "etiqueta": "callback",
+    "operaciones": [
+      "cerrar_llamada",
+      "programar_llamada",
+      "enviar_plantilla_whatsapp"
+    ],
+    "llm": {
+      "etiqueta": "callback",
+      "motivo": "callback",
+      "confianza": 0.9,
+      "pide_baja": false,
+      "rechaza_whatsapp": false,
+      "callback_local": "2026-09-15T22:00",
+      "nota_contexto": null,
+      "email": null
+    },
+    "campos": {
+      "1": {
+        "no_antes_de": "2026-09-16T10:00:00+02:00"
+      }
+    }
+  },
+  "evx_03": {
+    "etiqueta": "descartado",
+    "operaciones": [
+      "cerrar_llamada"
+    ],
+    "llm": {
+      "etiqueta": "descartado",
+      "motivo": "descartado",
+      "confianza": 0.9,
+      "pide_baja": false,
+      "rechaza_whatsapp": false,
+      "callback_local": null,
+      "nota_contexto": null,
+      "email": null
+    },
+    "campos": {}
+  },
+  "evx_04": {
+    "etiqueta": "otro",
+    "operaciones": [
+      "cerrar_llamada",
+      "crear_tarea"
+    ],
+    "llm": null,
+    "campos": {
+      "1": {
+        "tipo": "revisar_llamada"
+      }
+    }
+  },
+  "evx_05": {
+    "etiqueta": "otro",
+    "operaciones": [
+      "cerrar_llamada",
+      "crear_tarea"
+    ],
+    "llm": null,
+    "campos": {
+      "1": {
+        "tipo": "revisar_llamada"
+      }
+    }
+  },
+  "evx_06": {
+    "etiqueta": "cortada",
+    "operaciones": [
+      "cerrar_llamada",
+      "programar_llamada"
+    ],
+    "llm": {
+      "etiqueta": "cortada",
+      "motivo": "cortada",
+      "confianza": 0.9,
+      "pide_baja": false,
+      "rechaza_whatsapp": false,
+      "callback_local": null,
+      "nota_contexto": null,
+      "email": null
+    },
+    "campos": {
+      "1": {
+        "no_antes_de": "2026-09-15T12:30:00+02:00"
+      }
+    }
+  },
+  "evx_07": {
+    "etiqueta": "cortada",
+    "operaciones": [
+      "cerrar_llamada",
+      "programar_llamada",
+      "crear_tarea"
+    ],
+    "llm": {
+      "etiqueta": "cortada",
+      "motivo": "cortada",
+      "confianza": 0.9,
+      "pide_baja": false,
+      "rechaza_whatsapp": false,
+      "callback_local": null,
+      "nota_contexto": null,
+      "email": null
+    },
+    "campos": {
+      "2": {
+        "tipo": "revisar_llamada"
+      }
+    }
+  },
+  "evx_08": {
+    "etiqueta": "sin_respuesta",
+    "operaciones": [
+      "cerrar_llamada",
+      "programar_llamada"
+    ],
+    "llm": null,
+    "campos": {}
+  },
+  "evx_09": {
+    "etiqueta": "sin_respuesta",
+    "operaciones": [
+      "cerrar_llamada",
+      "programar_llamada"
+    ],
+    "llm": null,
+    "campos": {}
+  },
+  "evx_10": {
+    "etiqueta": "sin_respuesta",
+    "operaciones": [
+      "cerrar_llamada",
+      "enviar_plantilla_whatsapp"
+    ],
+    "llm": null,
+    "campos": {
+      "1": {
+        "plantilla": "primer_toque_respaldo"
+      }
+    }
+  },
+  "evx_11": {
+    "etiqueta": "ocupado",
+    "operaciones": [
+      "cerrar_llamada",
+      "programar_llamada"
+    ],
+    "llm": null,
+    "campos": {
+      "1": {
+        "no_antes_de": "2026-09-21T10:00:00+02:00"
+      }
+    }
+  },
+  "evx_12": {
+    "etiqueta": "no_contactar",
+    "operaciones": [
+      "cerrar_llamada",
+      "marcar_no_contactar"
+    ],
+    "llm": {
+      "etiqueta": "no_contactar",
+      "motivo": "no_contactar",
+      "confianza": 0.9,
+      "pide_baja": true,
+      "rechaza_whatsapp": false,
+      "callback_local": null,
+      "nota_contexto": null,
+      "email": null
+    },
+    "campos": {}
+  },
+  "evx_13": {
+    "etiqueta": "callback",
+    "operaciones": [
+      "cerrar_llamada",
+      "programar_llamada"
+    ],
+    "llm": {
+      "etiqueta": "callback",
+      "motivo": "callback",
+      "confianza": 0.9,
+      "pide_baja": false,
+      "rechaza_whatsapp": false,
+      "callback_local": "2026-09-15T20:00",
+      "nota_contexto": null,
+      "email": null
+    },
+    "campos": {
+      "1": {
+        "no_antes_de": "2026-09-15T20:00:00+02:00"
+      }
+    }
+  },
+  "evx_14": {
+    "etiqueta": "cortada",
+    "operaciones": [
+      "cerrar_llamada",
+      "programar_llamada"
+    ],
+    "llm": {
+      "etiqueta": "cortada",
+      "motivo": "cortada",
+      "confianza": 0.9,
+      "pide_baja": false,
+      "rechaza_whatsapp": false,
+      "callback_local": null,
+      "nota_contexto": null,
+      "email": null
+    },
+    "campos": {}
+  },
+  "evx_15": {
+    "etiqueta": "documentacion_pendiente",
+    "operaciones": [
+      "cerrar_llamada",
+      "crear_tarea"
+    ],
+    "llm": {
+      "etiqueta": "documentacion_pendiente",
+      "motivo": "documentacion_pendiente",
+      "confianza": 0.9,
+      "pide_baja": false,
+      "rechaza_whatsapp": true,
+      "callback_local": null,
+      "nota_contexto": null,
+      "email": "a@b.es"
+    },
+    "campos": {}
+  },
+  "evx_16": {
+    "etiqueta": "sin_respuesta",
+    "operaciones": [
+      "cerrar_llamada",
+      "programar_llamada"
+    ],
+    "llm": null,
+    "campos": {}
+  },
+  "evx_17": {
+    "etiqueta": "sin_respuesta",
+    "operaciones": [
+      "cerrar_llamada",
+      "crear_tarea"
+    ],
+    "llm": null,
+    "campos": {
+      "1": {
+        "tipo": "llamar_a_mano"
+      }
+    }
+  },
+  "evx_18": {
+    "etiqueta": "documentacion_enviada",
+    "operaciones": [
+      "cerrar_llamada",
+      "programar_recordatorio",
+      "programar_recordatorio"
+    ],
+    "llm": {
+      "etiqueta": "documentacion_enviada",
+      "motivo": "documentacion_enviada",
+      "confianza": 0.9,
+      "pide_baja": false,
+      "rechaza_whatsapp": false,
+      "callback_local": null,
+      "nota_contexto": null,
+      "email": null
+    },
+    "campos": {}
+  },
+  "evx_19": {
+    "etiqueta": "no_contactar",
+    "operaciones": [
+      "cerrar_llamada",
+      "marcar_no_contactar",
+      "cancelar_recordatorio",
+      "cancelar_recordatorio"
+    ],
+    "llm": {
+      "etiqueta": "no_contactar",
+      "motivo": "no_contactar",
+      "confianza": 0.9,
+      "pide_baja": true,
+      "rechaza_whatsapp": false,
+      "callback_local": null,
+      "nota_contexto": null,
+      "email": null
+    },
+    "campos": {}
+  },
+  "evx_20": {
+    "etiqueta": "no_aplica",
+    "operaciones": [],
+    "llm": null,
+    "campos": {}
+  },
+  "evx_21": {
+    "etiqueta": "callback",
+    "operaciones": [
+      "cerrar_llamada",
+      "programar_llamada",
+      "enviar_plantilla_whatsapp"
+    ],
+    "llm": {
+      "etiqueta": "callback",
+      "motivo": "callback",
+      "confianza": 0.9,
+      "pide_baja": false,
+      "rechaza_whatsapp": false,
+      "callback_local": "2026-09-20T12:00",
+      "nota_contexto": null,
+      "email": null
+    },
+    "campos": {
+      "1": {
+        "no_antes_de": "2026-09-21T10:00:00+02:00"
+      }
+    }
+  }
+}

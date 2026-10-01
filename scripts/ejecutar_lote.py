@@ -70,6 +70,8 @@ def main() -> int:
 
     if args.dir.resolve() == (RAIZ / "eventos").resolve():
         fallos += _comparar_con_dorada(decisiones, ordenes)
+    elif (args.dir / "esperado.json").exists():
+        fallos += _comparar_con_esperado(decisiones, ordenes, args.dir / "esperado.json")
     return 1 if fallos else 0
 
 
@@ -85,6 +87,22 @@ def _comparar_con_dorada(decisiones: list[dict], ordenes: list[dict]) -> list[st
     print(f"tabla dorada: {len(decisiones) - len(fallos)}/{len(decisiones)} eventos coinciden")
     for fallo in fallos:
         print("  DORADA", fallo)
+    return fallos
+
+
+def _comparar_con_esperado(decisiones: list[dict], ordenes: list[dict], ruta: Path) -> list[str]:
+    esperado = json.loads(ruta.read_text(encoding="utf-8"))
+    fallos = []
+    for decision in decisiones:
+        caso = esperado[decision["event_id"]]
+        propias = [o["operacion"] for o in ordenes if o["event_id"] == decision["event_id"]]
+        if decision["etiqueta"] != caso["etiqueta"] or propias != caso["operaciones"]:
+            fallos.append(
+                f"{decision['event_id']}: {decision['etiqueta']} {propias} ≠ {caso['etiqueta']} | {decision['motivo']}"
+            )
+    print(f"esperado.json: {len(decisiones) - len(fallos)}/{len(decisiones)} eventos coinciden")
+    for fallo in fallos:
+        print("  ESPERADO", fallo)
     return fallos
 
 

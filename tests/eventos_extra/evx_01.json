@@ -1,0 +1,48 @@
+{
+  "event_id": "evx_01",
+  "type": "call.ended",
+  "occurred_at": "2026-09-17T11:20:00+02:00",
+  "organization_id": "org_demo_a",
+  "idempotency_key": "x-01",
+  "delivery_attempt": 1,
+  "campaign": {
+    "system_key": "first_touch_voice",
+    "entry_id": "ce_x401"
+  },
+  "lead": {
+    "contact_id": "c_x401",
+    "phone": "+34600000401",
+    "full_name": "Lead 401",
+    "lead_source": "idealista",
+    "property_ref": "RIB-1180",
+    "property_address": "calle Valle de Tormes 12, Boadilla del Monte",
+    "language": "es"
+  },
+  "telephony": {
+    "provider": "livekit_sip",
+    "call_id": "x-01",
+    "provider_call_id": "0301-telnyx",
+    "dialed_at": "2026-09-15T10:11:36+02:00",
+    "ringing_at": "2026-09-15T10:11:38+02:00",
+    "answered_at": null,
+    "ended_at": "2026-09-17T11:20:00+02:00",
+    "sip_status_code": 603,
+    "sip_status": "Decline D21",
+    "disconnect_reason": "USER_REJECTED",
+    "hung_up_by": null,
+    "duration_seconds": 0,
+    "amd": {
+      "result": "not_run",
+      "greeting_transcript": null,
+      "detected_at_secs": null,
+      "source": "none"
+    }
+  },
+  "transcript": [],
+  "agent_outcome": {
+    "appointment": null,
+    "slots_snapshot": {}
+  },
+  "recording": null,
+  "metrics": null
+}
