@@ -37,8 +37,9 @@ graph TD;
 - **El LLM solo lee conversaciones** (`clasificador_openai.py`, prompts en `prompts/`). Lo hace con salida
   estructurada `json_schema` strict, limitada a las etiquetas conversacionales. Extrae además la hora del callback,
   si pide la baja, si rechaza WhatsApp, la nota de contexto y el email.
-- **Las reglas duras mandan sobre el modelo** (`reglas.py`). La baja gana a todo, detectada por el LLM **o** por una
-  regex acotada. Si no hay salida del LLM, la etiqueta es `otro` y se crea la tarea de revisión.
+- **Las reglas duras mandan sobre el modelo** (`reglas.py`). La baja gana a todo; la detecta el LLM, con una regex
+  acotada **solo si el LLM no responde**, para que N2 se cumpla aunque OpenAI caiga. Si no hay salida del LLM, la
+  etiqueta es `otro` y se crea la tarea de revisión.
 - **La política es una tabla en código** (`politica.py`): etiqueta → órdenes, y luego los filtros N3, N1, N4 y N2.
   Las fechas se calculan en `calendario.py` con zoneinfo Europe/Madrid, con la ventana inclusiva y teniendo en
   cuenta días hábiles y el cambio de hora.
@@ -76,7 +77,8 @@ Las decisiones de diseño y cada interpretación de la especificación, con su p
    21/21, con 0 errores de esquema.
 5. **Revisión de buenas prácticas** con un agente que contrastó el código con la documentación oficial (MCP
    `docs-langchain`) y con el código fuente instalado. Encontró 6 riesgos de robustez; están corregidos y cada uno
-   tiene su test (detalle en `docs/decisiones.md`). Después se repitieron los dos lotes reales: 16/16 y 21/21.
+   tiene su test (detalle en `docs/decisiones.md`).
+6. **Revisión final de bugs** con otro agente que no escribió el código. Encontró 8 fallos de comportamiento, entre ellos uno crítico: la regex de baja daba falsos positivos y pisaba al LLM. Cada fallo tiene un test de regresión (`tests/test_revision_final.py`). Comprobé que esos tests **fallan con el código anterior** (14 de 23) y pasan con el nuevo. Después repetí los dos lotes reales: 16/16 y 21/21.
 
 `uv run pytest` ejecuta las pruebas sin red. El proceso con la IA (qué le pedí, qué verifiqué y dónde se equivocó)
 está en [`PROCESS.md`](PROCESS.md).

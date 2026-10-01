@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS eventos_procesados (
 CREATE TABLE IF NOT EXISTS leads (
     contact_id       TEXT PRIMARY KEY,
     baja             INTEGER NOT NULL DEFAULT 0,
-    rechaza_whatsapp INTEGER NOT NULL DEFAULT 0
+    rechaza_whatsapp INTEGER NOT NULL DEFAULT 0,
+    respaldo_enviado INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS recordatorios (
     reminder_id TEXT PRIMARY KEY,
@@ -89,9 +90,7 @@ class Repositorio:
             f"SELECT COUNT(*) FROM eventos_procesados WHERE contact_id = ? AND etiqueta IN ({marcas})",
             (contact_id, *sorted(CORTADAS)),
         ).fetchone()[0]
-        lead = self.conn.execute(
-            "SELECT baja, rechaza_whatsapp FROM leads WHERE contact_id = ?", (contact_id,)
-        ).fetchone()
+        lead = self.conn.execute("SELECT * FROM leads WHERE contact_id = ?", (contact_id,)).fetchone()
         pendientes = tuple(
             Recordatorio(f["reminder_id"], f["contact_id"], f["canal"], f["cuando"], f["cancelar_si"])
             for f in self.conn.execute(
@@ -104,6 +103,7 @@ class Repositorio:
             cortadas_previas=cortadas,
             baja=bool(lead and lead["baja"]),
             rechaza_whatsapp=bool(lead and lead["rechaza_whatsapp"]),
+            respaldo_enviado=bool(lead and lead["respaldo_enviado"]),
             recordatorios_pendientes=pendientes,
         )
 
@@ -133,14 +133,14 @@ class Repositorio:
             (clave, orden_id, event_id, operacion, json.dumps(cuerpo, ensure_ascii=False)),
         )
 
-    def marcar_lead(self, contact_id: str, *, baja: bool | None = None, rechaza_whatsapp: bool | None = None) -> None:
+    def marcar_lead(self, contact_id: str, **marcas: bool | None) -> None:
+        """marcas: baja, rechaza_whatsapp y/o respaldo_enviado. None = no tocar."""
         self.conn.execute("INSERT OR IGNORE INTO leads (contact_id) VALUES (?)", (contact_id,))
-        if baja is not None:
-            self.conn.execute("UPDATE leads SET baja = ? WHERE contact_id = ?", (int(baja), contact_id))
-        if rechaza_whatsapp is not None:
-            self.conn.execute(
-                "UPDATE leads SET rechaza_whatsapp = ? WHERE contact_id = ?", (int(rechaza_whatsapp), contact_id)
-            )
+        for columna, valor in marcas.items():
+            if columna not in ("baja", "rechaza_whatsapp", "respaldo_enviado"):
+                raise ValueError(f"marca desconocida: {columna}")
+            if valor is not None:
+                self.conn.execute(f"UPDATE leads SET {columna} = ? WHERE contact_id = ?", (int(valor), contact_id))
 
     def crear_recordatorio(self, rec: Recordatorio) -> None:
         self.conn.execute(

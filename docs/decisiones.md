@@ -25,7 +25,12 @@ Las demás son interpretaciones de la especificación que contrastó un agente r
 | Intentos agotados (N3) **(usuario)** | Solo para etiquetas sin contacto (`sin_respuesta`, `ocupado`, `buzon`). Si el lead habló y pidió otra llamada, se le llama. El revisor opinaba aplicarlo a todas las de voz; se mantuvo la decisión |
 | Respaldo con WhatsApp rechazado (N1) **(usuario)** | `crear_tarea llamar_a_mano`: el lead no se pierde y no se le escribe por WhatsApp |
 | Baja con recordatorios pendientes **(usuario)** | Se cancelan: cancelar no contacta al lead, y dejarlos vivos haría que le llegara un WhatsApp tras la baja |
-| Detección de la baja **(usuario)** | LLM (`pide_baja`) **o** regex acotada sobre los turnos del lead. Funciona aunque el LLM caiga (probado) |
+| Detección de la baja **(usuario)** | La detecta el LLM (`pide_baja`). La regex acotada solo actúa si el LLM no responde. **Cambiado tras la revisión final:** con «LLM **o** regex», la regex pisaba al modelo con falsos positivos («no me llaméis más hoy», un número equivocado que dice «no me volváis a llamar»). N2 se sigue cumpliendo aunque el LLM caiga (probado) |
+| Baja pedida por WhatsApp **(usuario)** | En un `message.received`, la regex acotada sobre el texto (en los mensajes no hay LLM) registra la baja, emite `marcar_no_contactar` con canal `todos` y cancela todos los recordatorios. La etiqueta sigue siendo `no_aplica` |
+| Rechazo de WhatsApp con recordatorios programados | Se cancelan los recordatorios por WhatsApp pendientes (no el del comercial): si no, saldrían igual y romperían N1 |
+| Canal de respaldo repetido | Se envía una vez por lead (`respaldo_enviado`). Un cuarto 480 o un segundo 603 solo cierran la llamada |
+| Callback para un día sin hora | El prompt pide 00:00 y el código usa la primera hora válida de ese día. Solo hay `aviso_cambio_hora` si cambia el día (p. ej. domingo → lunes) |
+| Referencia temporal del prompt | `telephony.ended_at`: «mañana» se resuelve desde el fin real de la conversación, también en una reentrega cuyo original se perdió |
 | Callback antes de 2 h **(usuario)** | Manda la hora pedida, ajustada solo a la ventana. La separación mínima es para reintentos no pedidos |
 | `no_contactar` y `cerrar_llamada` | Sí se cierra, con `dnc`: se pide en todo `call.ended`, y «ninguna otra orden» se refiere a contactar al lead |
 | Ocupado 30–90 min | El punto medio (+60) reproduce el ejemplo resuelto. Si cae fuera, el punto válido más cercano dentro del rango; si no hay, la siguiente apertura |

@@ -68,7 +68,9 @@ def datos_usuario(evento: dict) -> dict[str, str]:
     amd = tel.get("amd") or {}
     lead = evento.get("lead") or {}
     salida = evento.get("agent_outcome") or {}
-    ref = a_madrid(evento["occurred_at"])
+    # «Mañana» se resuelve desde el fin real de la llamada: en una reentrega cuyo original se perdió,
+    # occurred_at es el de la reentrega (p. ej. el día siguiente), no el de la conversación.
+    ref = a_madrid(tel.get("ended_at") or evento["occurred_at"])
     turnos = evento.get("transcript") or []
     transcripcion = "\n".join(
         f"[{t.get('time_in_call_secs', '?')}s] {_quien(t)}: {t.get('message', '')}" for t in turnos

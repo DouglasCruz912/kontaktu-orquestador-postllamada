@@ -36,6 +36,9 @@ Herramienta: **Claude Code** (Opus 5.5), en Windows 11.
 | 17 | «Recuerda verificar el código con las buenas prácticas de las tecnologías; quizá context7» | Lanzó en segundo plano un **agente revisor de solo lectura** que contrastó el código con la documentación oficial (MCP `docs-langchain`; context7 no estaba disponible) y con el código fuente instalado. Propuso además una revisión final de bugs con agentes nuevos | — |
 | 18 | — | El revisor confirmó el núcleo (`context_schema`, `error_handler` + `Command`, aristas condicionales, `max_retries=0`, esquema strict) y encontró 6 riesgos y 3 detalles de estilo. La IA los aplicó todos, con un test para cada riesgo | — |
 | 19 | «Continúa, se fue la luz otra vez» | Comprobó que el repo quedó entero (`git fsck`, lint, 90 tests), avisó de que el tope de 4 h ya había pasado en tiempo de reloj, y repitió los dos lotes con el LLM real para descartar regresiones | Seguir |
+| 20 | Revisión final: sí. GitHub: público | Lanzó un revisor de bugs (skill `requesting-code-review`). Mientras revisaba, **publicó el repo ya** para no perder la entrega con otro corte de luz: antes buscó secretos en ficheros e historial y no encontró ninguno | https://github.com/DouglasCruz912/kontaktu-orquestador-postllamada |
+| 21 | — | Con la skill `receiving-code-review`, **verificó cada hallazgo antes de tocar nada**. Se confirmaron los 7 falsos positivos de la regex. Como eso cambiaba una decisión mía, me la consultó en vez de aplicarla | Regex solo si el LLM falla; la baja por WhatsApp se registra y se marca en el CRM |
+| 22 | — | Aplicó los 8 hallazgos con un test de regresión por cada uno. **Comprobó que esos tests fallan con el código anterior** (14 de 23, en un worktree aparte) y luego repitió los dos lotes reales: 16/16 y 21/21 | — |
 
 ## 2. Skills, plugins y herramientas: cuáles y por qué
 
@@ -66,6 +69,17 @@ Herramienta: **Claude Code** (Opus 5.5), en Windows 11.
    - **F:** fallos al abrir SQLite sin línea de respaldo.
 
    **Detectados por el agente revisor.** Todos tienen ahora su test.
+9. **La red de seguridad de la baja era un riesgo, no una protección.** La regex que propuse para cubrir fallos del LLM daba falsos positivos («no me llaméis más hoy», «no quiero darme de baja», un número equivocado que dice «no me volváis a llamar») y, como la regla era «LLM **o** regex», pisaba al modelo. Eso habría producido bajas falsas, un fallo crítico en el par 9/10. **Detectado por el revisor final**, que lo reprodujo de punta a punta. Arreglo, decidido por mí: la regex solo actúa si el LLM no responde.
+10. **Huecos de comportamiento que ni la IA ni la primera revisión vieron:**
+    - un WhatsApp programado que seguía vivo tras el rechazo del canal;
+    - la baja pedida por WhatsApp, que se ignoraba;
+    - una cita sin hora que tumbaba el evento;
+    - el respaldo, que se repetía en cada intento;
+    - un motivo «None»;
+    - la referencia del prompt en una reentrega;
+    - un aviso de cambio de hora falso.
+
+    **Detectados por el revisor final.** Cada uno tiene su test.
 
 ### Afirmaciones de la investigación comprobadas contra la librería instalada (4 de 4 correctas)
 
@@ -97,3 +111,5 @@ Herramienta: **Claude Code** (Opus 5.5), en Windows 11.
 - 2026-09-30, 20:45: 21 eventos extra. Lote real: 21/21.
 - 2026-09-30, ~20:58: correcciones de la revisión aplicadas (90 tests). **Corte de luz**: la sesión se interrumpe sin el commit de esas correcciones.
 - 2026-10-01, 07:02: se retoma. El repo estaba intacto. **Tiempo efectivo hasta el corte: ~1 h 25 min** (19:33 a ~20:58). El tope de 4 h ya había pasado en tiempo de reloj.
+- 2026-10-01, ~07:20: repo publicado en GitHub. Revisión final de bugs: 8 hallazgos, 1 crítico.
+- 2026-10-01, ~07:50: hallazgos corregidos (117 tests); lotes reales 16/16 y 21/21.

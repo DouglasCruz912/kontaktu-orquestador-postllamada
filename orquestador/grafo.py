@@ -31,7 +31,7 @@ from orquestador.config import Config
 from orquestador.dominio import Clasificacion, ContextoLead, Orden
 from orquestador.persistencia import Repositorio
 from orquestador.politica import planificar_llamada, planificar_mensaje
-from orquestador.reglas import aplicar_reglas
+from orquestador.reglas import aplicar_reglas, es_baja
 from orquestador.salida import CambiosLead, emitir
 from orquestador.senalizacion import clasificar_por_senalizacion
 
@@ -98,8 +98,14 @@ def repetir_decision(state: Estado) -> dict:
 
 
 def cancelar_recordatorios(state: Estado) -> dict:
-    ordenes = planificar_mensaje(state["evento"], state["lead"])
-    motivo = f"el lead respondió por WhatsApp: se cancelan {len(ordenes)} recordatorios pendientes"
+    texto = (state["evento"].get("message") or {}).get("text") or ""
+    frase_baja = texto if es_baja(texto) else None  # en mensajes no hay LLM: solo la regex acotada
+    ordenes = planificar_mensaje(state["evento"], state["lead"], frase_baja)
+    cancelados = sum(o.operacion == "cancelar_recordatorio" for o in ordenes)
+    if frase_baja:
+        motivo = f"el lead pidió la baja por WhatsApp: se registra y se cancelan {cancelados} recordatorios"
+    else:
+        motivo = f"el lead respondió por WhatsApp: se cancelan {cancelados} recordatorios pendientes"
     clasif = Clasificacion("no_aplica", motivo, 1.0, "no_aplica")
     return {"clasificacion": clasif, "ordenes": ordenes, "registrar_evento": True}
 

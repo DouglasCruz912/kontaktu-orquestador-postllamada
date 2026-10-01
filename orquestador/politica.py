@@ -64,14 +64,18 @@ def planificar_llamada(
 
     if etiqueta == "visita_reservada":
         cita = evento["agent_outcome"]["appointment"]
-        visita = instante(cita["start_time"])
-        vence = max(cal.mas_horas(visita, -cfg.confirmar_visita_margen_horas), ref)
+        visita = _parsear_hora_local(cita.get("start_time"))
+        if visita is not None:
+            vence = max(cal.mas_horas(visita, -cfg.confirmar_visita_margen_horas), ref)
+        else:  # el esquema permite una cita sin start_time: la tarea vence al plazo por defecto
+            vence = cal.mas_dias(ref, cfg.vencimiento_por_defecto_dias)
         direccion = datos.lead.get("property_address") or "dirección no disponible en el CRM"
+        cuando_visita = visita.isoformat() if visita else "(hora no disponible)"
         borradores.append(
             datos.tarea(
                 "confirmar_visita_direccion",
                 f"Confirmar la dirección de la visita de {datos.nombre}",
-                f"Visita {visita.isoformat()} ({cita.get('appointment_id')}) al inmueble "
+                f"Visita {cuando_visita} ({cita.get('appointment_id')}) al inmueble "
                 f"{datos.lead.get('property_ref')}: {direccion}. Confirmar la dirección exacta al lead.",
                 vence,
             )
@@ -139,7 +143,7 @@ def planificar_llamada(
         # Decidido con el usuario: dejar vivos los recordatorios haría que le llegara un WhatsApp tras la baja.
         borradores += _cancelaciones(lead, ref, "el lead pidió la baja", solo_lead_responde=False)
     elif etiqueta == "rechazada":
-        borradores.append(_respaldo(datos))
+        borradores += _respaldo_si_no_enviado(datos, lead)
     elif etiqueta == "documentacion_pendiente":
         email = llm.email if llm and llm.email else "pedir el email al lead"
         borradores.append(
@@ -157,14 +161,18 @@ def planificar_llamada(
     # N3 · intentos agotados (solo etiquetas sin contacto): la llamada se sustituye por el canal de respaldo.
     if etiqueta in SIN_CONTACTO and intento_actual >= cfg.max_intentos:
         borradores = [b for b in borradores if b.operacion != "programar_llamada"]
-        borradores.append(_respaldo(datos))
+        borradores += _respaldo_si_no_enviado(datos, lead)
 
     # N1 · WhatsApp rechazado. Si en esta llamada aceptó WhatsApp (documentacion_enviada), manda lo último que dijo.
-    whatsapp_bloqueado = (lead.rechaza_whatsapp and etiqueta != "documentacion_enviada") or bool(
-        llm and llm.rechaza_whatsapp
-    )
+    rechaza_ahora = etiqueta == "documentacion_pendiente" or bool(llm and llm.rechaza_whatsapp)
+    whatsapp_bloqueado = (lead.rechaza_whatsapp and etiqueta != "documentacion_enviada") or rechaza_ahora
     if whatsapp_bloqueado:
         borradores = _sin_whatsapp(borradores, datos, ref)
+    if rechaza_ahora:
+        # Un recordatorio por WhatsApp programado antes del rechazo saldría igual: se cancela (N1).
+        borradores += _cancelaciones(
+            lead, ref, "el lead rechazó WhatsApp", solo_lead_responde=False, canal="whatsapp_lead"
+        )
 
     # N4 · segunda llamada cortada con el mismo lead (cortada o visita_sin_confirmar).
     if etiqueta in CORTADAS and lead.cortadas_previas >= 1:
@@ -179,10 +187,27 @@ def planificar_llamada(
     return _asignar_claves(evento["idempotency_key"], borradores)
 
 
-def planificar_mensaje(evento: dict, lead: ContextoLead) -> list[Orden]:
-    """R7: el lead responde por WhatsApp → se cancela cada recordatorio pendiente que dependía de eso."""
+def planificar_mensaje(evento: dict, lead: ContextoLead, frase_baja: str | None = None) -> list[Orden]:
+    """R7: el lead responde por WhatsApp → se cancela cada recordatorio pendiente que dependía de eso.
+
+    Si en el mensaje pide la baja (decidido con el usuario): marcar_no_contactar y se cancelan TODOS sus
+    recordatorios; la baja queda persistida y N2 bloquea lo saliente en eventos posteriores.
+    """
     ref = instante(evento["occurred_at"])
-    borradores = _cancelaciones(lead, ref, "el lead respondió por WhatsApp", solo_lead_responde=True)
+    if frase_baja is None:
+        borradores = _cancelaciones(lead, ref, "el lead respondió por WhatsApp", solo_lead_responde=True)
+        return _asignar_claves(evento["idempotency_key"], borradores)
+    marcar = _Borrador(
+        "marcar_no_contactar",
+        {
+            "telefono": evento["lead"]["phone"],
+            "contact_id": evento["lead"]["contact_id"],
+            "canal": "todos",
+            "motivo": f"pidió la baja por WhatsApp: «{frase_baja}»",
+            "origen": f"whatsapp {evento['event_id']}",
+        },
+    )
+    borradores = [marcar, *_cancelaciones(lead, ref, "el lead pidió la baja", solo_lead_responde=False)]
     return _asignar_claves(evento["idempotency_key"], borradores)
 
 
@@ -276,6 +301,11 @@ def _respaldo(datos: _Datos) -> _Borrador:
     return borrador
 
 
+def _respaldo_si_no_enviado(datos: _Datos, lead: ContextoLead) -> list[_Borrador]:
+    """El canal de respaldo es un primer toque: se envía una vez por lead, no en cada intento fallido posterior."""
+    return [] if lead.respaldo_enviado else [_respaldo(datos)]
+
+
 def _callback(datos: _Datos, llm: ClasificacionLLM | None, ref: datetime, cfg: Config) -> list[_Borrador]:
     cal = cfg.calendario
     pedida = _parsear_hora_local(llm.callback_local if llm else None)
@@ -285,7 +315,8 @@ def _callback(datos: _Datos, llm: ClasificacionLLM | None, ref: datetime, cfg: C
         cuando = cal.primer_valido_desde(cal.mas_horas(ref, cfg.separacion_minima_horas))
         return [datos.llamada(cuando, "callback solicitado (sin hora concreta)", nota)]
     cuando = cal.primer_valido_desde(pedida)
-    if cuando == pedida:
+    sin_hora = pedida.hour == 0 and pedida.minute == 0  # el prompt pide 00:00 cuando el lead da un día sin hora
+    if cuando == pedida or (sin_hora and cuando.date() == pedida.date()):
         return [datos.llamada(cuando, "callback solicitado", nota)]
     # Caso 12: la hora pedida cae fuera de la ventana → primera franja válida y aviso al lead.
     nota = f"{nota}. Pidió {pedida.isoformat()}, fuera de la ventana de llamadas"
@@ -318,10 +349,14 @@ def _nota_contexto(evento: dict, llm: ClasificacionLLM | None) -> str:
     return "; ".join(partes) if partes else "sin datos recogidos"
 
 
-def _cancelaciones(lead: ContextoLead, ref: datetime, motivo: str, solo_lead_responde: bool) -> list[_Borrador]:
+def _cancelaciones(
+    lead: ContextoLead, ref: datetime, motivo: str, solo_lead_responde: bool, canal: str | None = None
+) -> list[_Borrador]:
     borradores = []
     for rec in lead.recordatorios_pendientes:
         if solo_lead_responde and rec.cancelar_si != "lead_responde":
+            continue
+        if canal is not None and rec.canal != canal:
             continue
         if instante(rec.cuando) <= ref:  # ya se disparó: no hay nada que cancelar
             continue

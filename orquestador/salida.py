@@ -146,6 +146,14 @@ def _efectos_en_estado(repo: Repositorio, evento: dict, orden: Orden) -> None:
         repo.cancelar_recordatorio(orden.cuerpo["reminder_id"])
     elif orden.operacion == "marcar_no_contactar":
         repo.marcar_lead(contact_id, baja=True)
+    elif _es_respaldo(orden):
+        repo.marcar_lead(contact_id, respaldo_enviado=True)  # el respaldo (o su sustituto por N1) va una sola vez
+
+
+def _es_respaldo(orden: Orden) -> bool:
+    if orden.operacion == "enviar_plantilla_whatsapp":
+        return orden.cuerpo.get("plantilla") == "primer_toque_respaldo"
+    return orden.operacion == "crear_tarea" and orden.cuerpo.get("tipo") == "llamar_a_mano"
 
 
 def _restaurar(tamanos: dict[Path, int]) -> None:

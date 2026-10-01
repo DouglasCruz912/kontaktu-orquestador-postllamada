@@ -39,7 +39,8 @@ equivocado no es una baja. Una baja no es un descarte: solo la baja impide volve
   `YYYY-MM-DDTHH:MM` en hora de Madrid. «Mañana» es el día siguiente al de referencia. Si la hora es ambigua
   («a las seis»), elige la lectura entre las 10:00 y las 20:00 (las 18:00); si el lead la precisa («de la mañana»,
   «esta noche a las diez»), respeta lo que dijo aunque caiga fuera de ese horario. Si pide «por la tarde» sin hora,
-  usa las 16:00; «por la mañana», las 10:00. Si no da ningún momento concreto, null.
+  usa las 16:00; «por la mañana», las 10:00. Si da un día sin hora ni franja («el jueves»), usa ese día a las
+  00:00 (el sistema elegirá la primera hora válida). Si no da ningún momento concreto, null.
 - `nota_contexto`: lo ya hablado, en una frase corta, para que la próxima llamada no repita preguntas (operación,
   zonas, presupuesto, visita acordada de palabra con su día y hora…). null si no se recogió nada.
 - `email`: el email que dio el lead, o null.

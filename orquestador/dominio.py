@@ -72,6 +72,7 @@ class ContextoLead:
     cortadas_previas: int = 0
     baja: bool = False
     rechaza_whatsapp: bool = False
+    respaldo_enviado: bool = False
     recordatorios_pendientes: tuple[Recordatorio, ...] = ()
 
 
